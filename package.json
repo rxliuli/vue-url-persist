@@ -1,6 +1,6 @@
 {
   "name": "vue-url-persist",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "这是一个将 vue data 中的响应式数据序列化到 URL 上的库，并能根据 URL 上的数据解析到 data 数据中。",
   "license": "mit",
   "main": "dist/vue-url-persist.js",

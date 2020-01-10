@@ -55,20 +55,26 @@ export default {
 </script>
 ```
 
-注意：如果使用子路由，请务必设置 `:key="$route.path"`
+## 注意
 
-```vue
-<template>
-  <div class="form2">
-    <header>
-      <RouterLink to="/form2/1">第一个 Tab</RouterLink>
-      <RouterLink to="/form2/2">第二个 Tab</RouterLink>
-    </header>
-    <!--如果有子路由则必须设置该属性-->
-    <RouterView :key="$route.path" />
-  </div>
-</template>
-```
+- 如果使用子路由，请务必设置 `:key="$route.path"`
+
+  ```vue
+  <template>
+    <div class="form2">
+      <header>
+        <RouterLink to="/form2/1">第一个 Tab</RouterLink>
+        <RouterLink to="/form2/2">第二个 Tab</RouterLink>
+      </header>
+      <!--如果有子路由则必须设置该属性-->
+      <RouterView :key="$route.path" />
+    </div>
+  </template>
+  ```
+
+- 如果需要设置初始值，请使用 `null` 非 `undefined`，因为 `undefined` 不会被更新
+- 如果需要绑定时间，请使用同时支持 `Date/MomentDate` 与 `string` 的控件（例如 AntD），或者使用 `computed` 进行额外的处理
+- 默认使用 `JSON.stringfy` 进行序列化，所以请使用 `JSON` 支持的数据结构，不要将 `Set/Map` 序列化到 URL 上
 
 ## 依赖
 

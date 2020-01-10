@@ -27,15 +27,24 @@ export class VueUrlPersist {
   private static setInitData(vm: Vue, exp: string, urlData: any) {
     const oldVal = get(vm, exp, null)
     const newVal = urlData[exp]
-    //如果原值是对象且新值也是对象，则进行浅合并
+    if (
+      //为 undefined 则直接返回，但 null 的话一般是刻意设置
+      newVal === undefined ||
+      //如果原值与新值相同，则需要直接返回
+      JSON.stringify(oldVal) === JSON.stringify(newVal)
+    ) {
+      return
+    }
     if (
       oldVal === undefined ||
       oldVal === null ||
       typeof oldVal === 'string' ||
-      typeof oldVal === 'number'
+      typeof oldVal === 'number' ||
+      Array.isArray(oldVal)
     ) {
       set(vm, exp, newVal)
     } else if (typeof oldVal === 'object' && typeof newVal === 'object') {
+      //如果原值是对象且新值也是对象，则进行浅合并
       Object.assign(get(vm, exp), newVal)
     }
   }
@@ -53,13 +62,14 @@ export class VueUrlPersist {
         exp,
         debounce(function(val) {
           urlData[exp] = val
-          if (vm.$route.query[key] === JSON.stringify(urlData)) {
+          const qbStr = JSON.stringify(urlData)
+          if (vm.$route.query[key] === qbStr) {
             return
           }
           vm.$router.replace({
             query: {
               ...vm.$route.query,
-              [key]: JSON.stringify(urlData)
+              [key]: qbStr
             }
           })
         }, 1000),

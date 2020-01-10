@@ -1,33 +1,7 @@
-/*! *****************************************************************************
-Copyright (c) Microsoft Corporation. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at http://www.apache.org/licenses/LICENSE-2.0
-
-THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-MERCHANTABLITY OR NON-INFRINGEMENT.
-
-See the Apache Version 2.0 License for specific language governing permissions
-and limitations under the License.
-***************************************************************************** */
-
-var __assign = function() {
-    __assign = Object.assign || function __assign(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-
 function parseFieldStr(str) {
     return str
         .split(/[\\.\\[]/)
-        .map(function (k) { return (/\]$/.test(k) ? k.slice(0, k.length - 1) : k); });
+        .map(k => (/\]$/.test(k) ? k.slice(0, k.length - 1) : k));
 }
 /**
  * 安全的深度获取对象的字段
@@ -37,14 +11,12 @@ function parseFieldStr(str) {
  * @param fields 字段字符串或数组
  * @param [defVal] 取不到值时的默认值，默认为 null
  */
-function get(obj, fields, defVal) {
-    if (defVal === void 0) { defVal = null; }
+function get(obj, fields, defVal = null) {
     if (typeof fields === 'string') {
         fields = parseFieldStr(fields);
     }
-    var res = obj;
-    for (var _i = 0, _a = fields; _i < _a.length; _i++) {
-        var field = _a[_i];
+    let res = obj;
+    for (const field of fields) {
         try {
             res = Reflect.get(res, field);
             if (res === undefined || res === null) {
@@ -67,9 +39,9 @@ function set(obj, fields, val) {
     if (typeof fields === 'string') {
         fields = parseFieldStr(fields);
     }
-    var res = obj;
-    for (var i = 0, len = fields.length; i < len; i++) {
-        var field = fields[i];
+    let res = obj;
+    for (let i = 0, len = fields.length; i < len; i++) {
+        const field = fields[i];
         if (i === len - 1) {
             res[field] = val;
             return true;
@@ -107,23 +79,17 @@ function set(obj, fields, val) {
  * @param init 初始的缓存值，不填默认为 {@see undefined}
  * @return 包装后有去抖功能的函数。该函数是异步的，与需要包装的函数 {@see action} 是否异步没有太大关联
  */
-function debounce(action, delay, init) {
-    if (init === void 0) { init = null; }
-    var flag;
-    var result = init;
-    return function () {
-        var _this = this;
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        return new Promise(function (resolve) {
+function debounce(action, delay, init = null) {
+    let flag;
+    let result = init;
+    return function (...args) {
+        return new Promise(resolve => {
             if (flag)
                 clearTimeout(flag);
             flag = setTimeout(
             // @ts-ignore
-            function () { return resolve((result = action.apply(_this, args))); }, delay);
-            setTimeout(function () { return resolve(result); }, delay);
+            () => resolve((result = action.apply(this, args))), delay);
+            setTimeout(() => resolve(result), delay);
         });
     };
 }
@@ -131,12 +97,11 @@ function debounce(action, delay, init) {
 /**
  * Vue Url 持久化的 class
  */
-var VueUrlPersist = /** @class */ (function () {
+class VueUrlPersist {
     /**
      * 一些选项
      */
-    function VueUrlPersist(options) {
-        if (options === void 0) { options = {}; }
+    constructor(options = {}) {
         /**
          * 存到 url query param 的名字
          */
@@ -146,97 +111,103 @@ var VueUrlPersist = /** @class */ (function () {
     /**
      * 为 vue 实例上的字段进行深度赋值
      */
-    VueUrlPersist.setInitData = function (vm, exp, urlData) {
-        var oldVal = get(vm, exp, null);
-        var newVal = urlData[exp];
-        //如果原值是对象且新值也是对象，则进行浅合并
+    static setInitData(vm, exp, urlData) {
+        const oldVal = get(vm, exp, null);
+        const newVal = urlData[exp];
+        if (
+        //为 undefined 则直接返回，但 null 的话一般是刻意设置
+        newVal === undefined ||
+            //如果原值与新值相同，则需要直接返回
+            JSON.stringify(oldVal) === JSON.stringify(newVal)) {
+            return;
+        }
         if (oldVal === undefined ||
             oldVal === null ||
             typeof oldVal === 'string' ||
-            typeof oldVal === 'number') {
+            typeof oldVal === 'number' ||
+            Array.isArray(oldVal)) {
             set(vm, exp, newVal);
         }
         else if (typeof oldVal === 'object' && typeof newVal === 'object') {
+            //如果原值是对象且新值也是对象，则进行浅合并
             Object.assign(get(vm, exp), newVal);
         }
-    };
+    }
     /**
      * 初始化一些数据需要序列化/反序列化到 url data 上
      * @param vm vue 实例
      * @param exps 监视的数据的表达式数组
      */
-    VueUrlPersist.prototype.initUrlDataByCreated = function (vm, exps) {
-        var key = this.key;
-        var urlData = JSON.parse(vm.$route.query[key] || '{}');
-        exps.forEach(function (exp) {
+    initUrlDataByCreated(vm, exps) {
+        const key = this.key;
+        const urlData = JSON.parse(vm.$route.query[key] || '{}');
+        exps.forEach(exp => {
             VueUrlPersist.setInitData(vm, exp, urlData);
             vm.$watch(exp, debounce(function (val) {
-                var _a;
                 urlData[exp] = val;
-                if (vm.$route.query[key] === JSON.stringify(urlData)) {
+                const qbStr = JSON.stringify(urlData);
+                if (vm.$route.query[key] === qbStr) {
                     return;
                 }
                 vm.$router.replace({
-                    query: __assign(__assign({}, vm.$route.query), (_a = {}, _a[key] = JSON.stringify(urlData), _a))
+                    query: {
+                        ...vm.$route.query,
+                        [key]: qbStr
+                    }
                 });
             }, 1000), {
                 deep: true
             });
         });
-    };
+    }
     /**
      * 在组件被 vue-router 路由复用时，单独进行初始化数据
      * @param vm vue 实例
      * @param exps 监视的数据的表达式数组
      * @param route 将要改变的路由对象
      */
-    VueUrlPersist.prototype.initUrlDataByRouteUpdate = function (vm, exps, route) {
-        var urlData = JSON.parse(route.query[this.key] || '{}');
-        exps.forEach(function (exp) { return VueUrlPersist.setInitData(vm, exp, urlData); });
-    };
+    initUrlDataByRouteUpdate(vm, exps, route) {
+        const urlData = JSON.parse(route.query[this.key] || '{}');
+        exps.forEach(exp => VueUrlPersist.setInitData(vm, exp, urlData));
+    }
     /**
      * 生成可以 mixin 到 vue 实例的对象
      * @param exps 监视的数据的表达式数组
      * @returns {{created(): void, beforeRouteEnter(*=, *, *): void, beforeRouteUpdate(*=, *, *): void}}
      */
-    VueUrlPersist.prototype.generateInitUrlData = function () {
-        var exps = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            exps[_i] = arguments[_i];
-        }
-        var _this = this;
+    generateInitUrlData(...exps) {
+        const _this = this;
         return {
-            created: function () {
+            created() {
                 // @ts-ignore
                 _this.initUrlDataByCreated(this, exps);
             },
-            beforeRouteUpdate: function (to, from, next) {
+            beforeRouteUpdate(to, from, next) {
                 // @ts-ignore
                 _this.initUrlDataByRouteUpdate(this, exps, to);
                 next();
             },
-            beforeRouteEnter: function (to, from, next) {
-                next(function (vm) { return _this.initUrlDataByRouteUpdate(vm, exps, to); });
+            beforeRouteEnter(to, from, next) {
+                next(vm => _this.initUrlDataByRouteUpdate(vm, exps, to));
             }
         };
-    };
+    }
     /**
      * 修改一些配置
      * @param options 配置项
      */
-    VueUrlPersist.prototype.config = function (options) {
+    config(options) {
         Object.assign(this, options);
-    };
-    return VueUrlPersist;
-}());
+    }
+}
 /**
  * 导出一个默认的 VueUrlPersist 实例
  */
-var vueUrlPersist = new VueUrlPersist();
+const vueUrlPersist = new VueUrlPersist();
 /**
  * 导出用于生成可以 mixin 到 vue 实例的对象
  */
-var generateInitUrlData = vueUrlPersist.generateInitUrlData.bind(vueUrlPersist);
+const generateInitUrlData = vueUrlPersist.generateInitUrlData.bind(vueUrlPersist);
 
 export default vueUrlPersist;
 export { VueUrlPersist, generateInitUrlData, vueUrlPersist };

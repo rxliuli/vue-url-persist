@@ -1,6 +1,7 @@
 import { debounce, get, set } from './common'
 import { Vue } from 'vue/types/vue'
 import { Route, VueRouter } from 'vue-router/types/router'
+import { VueClass } from 'vue-class-component/lib/declarations'
 
 type VueUrlPersistConstruct = { key?: string }
 
@@ -100,11 +101,10 @@ export class VueUrlPersist {
    * @param exps 监视的数据的表达式数组
    * @returns {{created(): void, beforeRouteEnter(*=, *, *): void, beforeRouteUpdate(*=, *, *): void}}
    */
-  generateInitUrlData(...exps: string[]) {
+  generateInitUrlData(...exps: string[]): VueClass<{}> {
     const _this = this
-    return {
+    return Vue.extend({
       created() {
-        // @ts-ignore
         _this.initUrlDataByCreated(this, exps)
       },
       beforeRouteUpdate(to: Route, from: any, next: () => void) {
@@ -119,7 +119,7 @@ export class VueUrlPersist {
       ) {
         next(vm => _this.initUrlDataByRouteUpdate(vm, exps, to))
       }
-    }
+    })
   }
 
   /**
